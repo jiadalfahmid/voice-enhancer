@@ -16,6 +16,7 @@
     "postinstall": "node scripts/copy-ort.mjs",
     "test:studio": "node --experimental-strip-types --test tests/studio/*.nodetest.ts tests/studio/*.nodetest.js",
     "typecheck:studio": "tsc -p tsconfig.studio.json",
+    "test:e2e": "playwright test",
     "check": "npm run typecheck:studio && npm test && npm run test:studio"
   },
   "dependencies": {
