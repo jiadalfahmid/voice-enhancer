@@ -7,7 +7,7 @@ import { DF3_MODEL_RATE, DF3_FRAME_LENGTH } from '../../src/audio/pipeline-df3.j
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const wasmPath = path.resolve(__dirname, '../../public/models/deepfilternet3/df_bg.wasm');
-const modelPath = path.resolve(__dirname, '../../public/models/deepfilternet3/DeepFilterNet3_onnx.tar.gz');
+const modelPath = path.resolve(__dirname, '../../public/models/deepfilternet3/DeepFilterNet3_onnx.bin');
 
 describe('DeepFilterNet3 WASM Adapter', () => {
   it('instantiates the WASM module and processes 48 kHz frames', async () => {

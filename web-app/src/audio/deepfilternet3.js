@@ -1,5 +1,5 @@
 // DeepFilterNet3 WASM Adapter for Voice Enhancer.
-// Links df_bg.wasm and DeepFilterNet3_onnx.tar.gz via the WebAssembly runtime.
+// Links df_bg.wasm and DeepFilterNet3_onnx.bin via the WebAssembly runtime.
 // Operates natively at 48000 Hz with 480-sample time-domain frames (10 ms).
 
 let cachedFloat32Memory = null;
