@@ -27,8 +27,8 @@ export default function App() {
       <ErrorBoundary>
         <Studio />
       </ErrorBoundary>
-      <details className="studio" style={{ paddingTop: 0 }}>
-        <summary>Device &amp; legal details</summary>
+      <details className="studio app-footer" style={{ paddingTop: 0 }}>
+        <summary>Hardware Capabilities &amp; Legal Notices</summary>
         <p className="hint">{caps.crossOriginIsolated ? 'Cross-origin isolated: multi-thread ready.' : 'Not cross-origin isolated: single-thread mode.'}</p>
         <p className="hint">{['wasmSimd', 'audioWorklet', 'webgpu'].map((k) => `${k}: ${fmt(caps[k])}`).join(', ')}</p>
         <p className="hint">

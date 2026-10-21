@@ -46,10 +46,11 @@ export default function CompareView({ store, versions, aId, bId, setA, setB }) {
     return (
       <section aria-labelledby="cmp-h" className="panel">
         <div className="panel-header">
-          <h2 id="cmp-h" style={{ margin: 0 }}>Input Audio Preview</h2>
+          <h2 id="cmp-h">Input Audio Preview</h2>
+          <span className="badge tag">Single Track Mode</span>
         </div>
-        <p className="hint" style={{ marginTop: '4px' }}>
-          Listen to your recording and inspect the waveform below. Enhance with any model above to unlock side-by-side A/B comparison and instant crossfading.
+        <p className="hint">
+          Audition your recording and inspect the waveform below. Enhance with any model below to unlock side-by-side A/B comparison and instant crossfading.
         </p>
         <ABPlayer
           key={`single-${target.id}-${s}`}
@@ -59,8 +60,8 @@ export default function CompareView({ store, versions, aId, bId, setA, setB }) {
           singleTrack
         />
         {dur > PREVIEW_SECONDS && (
-          <label className="field" style={{ marginTop: '10px' }}>
-            Preview section from {fmtDuration(s)} (plays {PREVIEW_SECONDS} s on loop):
+          <label className="field" style={{ marginTop: '14px' }}>
+            <span>Preview window offset: <strong>{fmtDuration(s)}</strong> (plays {PREVIEW_SECONDS} s seamless loop)</span>
             <input type="range" min="0" max={maxStart} value={s} onChange={(e) => setStart(+e.target.value)} />
           </label>
         )}
@@ -71,12 +72,13 @@ export default function CompareView({ store, versions, aId, bId, setA, setB }) {
   return (
     <section aria-labelledby="cmp-h" className="panel">
       <div className="panel-header">
-        <h2 id="cmp-h" style={{ margin: 0 }}>A/B Comparison</h2>
+        <h2 id="cmp-h">A/B Audition &amp; Comparison Workspace</h2>
+        <span className="badge recommended">Loudness Matched &bull; -20 LUFS</span>
       </div>
       <div className="pair">{pick(aId, setA, 'Version A')}{pick(bId, setB, 'Version B')}</div>
       {!ready && (
-        <p className="hint">
-          Pick two different versions to hear them side by side. Both are loudness-matched to -20 LUFS, so louder never sounds better.
+        <p className="hint" style={{ marginTop: '10px' }}>
+          Select any two versions above to audition them side by side. Both are loudness-matched to -20 LUFS so louder never tricks your ears.
         </p>
       )}
       {ready && wins && (
@@ -90,8 +92,8 @@ export default function CompareView({ store, versions, aId, bId, setA, setB }) {
             labelB={versionTitle(store, b)}
           />
           {dur > PREVIEW_SECONDS && (
-            <label className="field" style={{ marginTop: '10px' }}>
-              Listen from {fmtDuration(s)} (plays {PREVIEW_SECONDS} s on loop):
+            <label className="field" style={{ marginTop: '14px' }}>
+              <span>Preview window offset: <strong>{fmtDuration(s)}</strong> (plays {PREVIEW_SECONDS} s seamless loop)</span>
               <input type="range" min="0" max={maxStart} value={s} onChange={(e) => setStart(+e.target.value)} />
             </label>
           )}

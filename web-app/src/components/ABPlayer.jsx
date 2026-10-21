@@ -94,14 +94,17 @@ export default function ABPlayer({ a, b, sampleRate, labelA = 'Original', labelB
       }
     };
     if (singleTrack || !b) {
-      paint(peaksA, 'rgba(14, 165, 233, 0.8)');
+      paint(peaksA, 'rgba(56, 189, 248, 0.85)');
     } else {
-      paint(peaksA, 'rgba(100, 116, 139, 0.45)');
-      paint(peaksB, 'rgba(13, 148, 136, 0.7)');
+      paint(peaksA, 'rgba(56, 189, 248, 0.4)');
+      paint(peaksB, 'rgba(52, 211, 153, 0.75)');
     }
     const px = (position() / dur) * w;
-    g.fillStyle = '#ef4444';
+    g.fillStyle = '#f43f5e';
     g.fillRect(px, 0, 2, h);
+    g.fillStyle = '#ffffff';
+    g.fillRect(px - 1, 0, 4, 3);
+    g.fillRect(px - 1, h - 3, 4, 3);
   }, [peaksA, peaksB, dur, singleTrack, b]);
 
   useEffect(() => { draw(); }, [draw, a, b]);
@@ -153,8 +156,8 @@ export default function ABPlayer({ a, b, sampleRate, labelA = 'Original', labelB
         <canvas
           ref={canvasRef}
           role="img"
-          aria-label={`Waveform comparison: grey is ${labelA}, teal is ${labelB}`}
-          style={{ width: '100%', height: 96, display: 'block', cursor: 'pointer' }}
+          aria-label={`Waveform comparison: blue is ${labelA}, teal is ${labelB}`}
+          style={{ width: '100%', height: 110, display: 'block', cursor: 'pointer' }}
           onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); seek(((e.clientX - r.left) / r.width) * dur); }}
         />
       </div>
