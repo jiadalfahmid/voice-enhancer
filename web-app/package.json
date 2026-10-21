@@ -12,7 +12,7 @@
     "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview --host",
-    "test": "vitest run",
+    "test": "vitest run tests/unit",
     "postinstall": "node scripts/copy-ort.mjs",
     "test:studio": "node --experimental-strip-types --test tests/studio/*.nodetest.ts tests/studio/*.nodetest.js",
     "typecheck:studio": "tsc -p tsconfig.studio.json",

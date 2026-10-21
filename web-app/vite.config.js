@@ -12,4 +12,8 @@ export default defineConfig({
   preview: { headers: isolationHeaders },
   worker: { format: 'es' },
   optimizeDeps: { exclude: ['onnxruntime-web'] },
+  test: {
+    include: ['tests/unit/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+  },
 });
+
