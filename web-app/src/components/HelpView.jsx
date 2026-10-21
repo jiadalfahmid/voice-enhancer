@@ -150,7 +150,7 @@ export default function HelpView({ onBack }) {
           ClearVoice Studio operates <strong>100% on your device</strong>. No audio file, waveform snippet, transcript, or personal telemetry is ever transmitted over the network. Once the model files are cached in your browser, ClearVoice Studio functions fully in <strong>Airplane Mode</strong> without an internet connection.
         </p>
         <p style={{ margin: 0 }}>
-          <a href="/privacy.html" style={{ color: 'var(--accent)' }}>Read our complete Privacy Notice &rarr;</a>
+          <a href="/privacy.html" style={{ color: 'var(--accent)' }}>Read our complete Privacy Notice &rarr;</a> &bull; Feedback &amp; Contact: <a href="mailto:jiadalfahmid@gmail.com" style={{ color: 'var(--accent)' }}>jiadalfahmid@gmail.com</a>
         </p>
       </section>
 

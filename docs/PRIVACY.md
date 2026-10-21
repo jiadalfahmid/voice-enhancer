@@ -1,7 +1,7 @@
 # Privacy Policy: ClearVoice Studio
 
 **Effective Date:** October 21, 2026  
-**Contact:** privacy@clearvoice.studio
+**Contact:** jiadalfahmid@gmail.com
 
 **In short:** Your audio never leaves your device. We do not have accounts, ads, trackers, or analytics.
 
@@ -56,4 +56,4 @@ If this policy changes, the effective date at the top will be updated.
 ---
 
 ### 9. Contact
-For any questions regarding privacy, please contact: `privacy@clearvoice.studio`.
+For any questions regarding privacy, please contact: `jiadalfahmid@gmail.com`.
