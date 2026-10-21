@@ -624,6 +624,19 @@ input[type="range"]::-webkit-slider-thumb:hover {
   margin: 10px 0;
 }
 
+.status-notice {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--accent);
+  font-size: 0.9rem;
+  margin: 10px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* Voice Polish Channel Strip Panel */
 .polish-panel {
   background: var(--panel);

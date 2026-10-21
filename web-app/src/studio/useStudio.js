@@ -35,17 +35,25 @@ export function useStudio() {
   const [, setTick] = useState(0);
   const refresh = useCallback(() => setTick((t) => t + 1), []);
   const [busy, setBusy] = useState(null); // {engineId, parentId, progress}
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState(null); // { text: string, type: 'status' | 'error' }
   const [loading, setLoading] = useState(false);
 
   const store = rt.current.store;
   const versions = store.list();
 
-  const say = (e) => setNotice(e?.name === 'AbortError' ? 'Cancelled. Your earlier results are untouched.' : (e?.message || 'Something went wrong.'));
+  const say = (e) => {
+    if (!e) { setNotice(null); return; }
+    if (e.name === 'AbortError') {
+      setNotice({ text: 'Cancelled. Your earlier results are untouched.', type: 'status' });
+    } else {
+      setNotice({ text: e.message || 'Something went wrong.', type: 'error' });
+    }
+  };
+  const setStatus = (text) => setNotice(text ? { text, type: 'status' } : null);
 
   const loadFile = useCallback(async (file) => {
     if (!file) return;
-    setNotice(''); setLoading(true);
+    setNotice(null); setLoading(true);
     try {
       const decoded = await decodeAudioFile(file);
       const limit = durationLimitMinutes(mem());
@@ -60,7 +68,7 @@ export function useStudio() {
 
   const run = useCallback(async (parentId, engineId) => {
     if (busy) return;
-    setNotice(''); setBusy({ engineId, parentId, progress: 0 });
+    setNotice(null); setBusy({ engineId, parentId, progress: 0 });
     const handle = rt.current.co.enqueue(parentId, engineId, { onProgress: (p) => setBusy((b) => (b ? { ...b, progress: p } : b)) });
     rt.current.handle = handle;
     try { await handle.promise; } catch (e) { say(e); } finally { rt.current.handle = null; setBusy(null); refresh(); }
@@ -73,7 +81,7 @@ export function useStudio() {
     const s = rt.current.store;
     const origId = s.originalId();
     if (!file || !origId) return;
-    setNotice('');
+    setNotice(null);
     try {
       const o = s.get(origId);
       const d = await decodeAudioFile(file);
@@ -89,7 +97,7 @@ export function useStudio() {
     const s = rt.current.store;
     const parent = s.get(parentId);
     if (!parent?.audio) return null;
-    setNotice('');
+    setNotice(null);
     setBusy({ engineId: 'voice-polish', parentId, progress: 0 });
     const abortCtrl = new AbortController();
     rt.current.handle = { cancel: () => abortCtrl.abort() };
@@ -132,12 +140,12 @@ export function useStudio() {
 
     if (typeof format === 'string' && format.startsWith('mp3')) {
       const kbps = parseInt(format.replace('mp3-', ''), 10) || 192;
-      setNotice('Encoding MP3...');
+      setStatus('Encoding MP3...');
       try {
         const Mp3Encoder = await loadMp3();
         const parts = await encodeMp3(v.audio.channels, v.audio.sampleRate, kbps, {
           Mp3Encoder,
-          onProgress: (p) => setNotice(`Encoding MP3: ${Math.round(p * 100)}%`),
+          onProgress: (p) => setStatus(`Encoding MP3: ${Math.round(p * 100)}%`),
         });
         const blob = new Blob(parts, { type: 'audio/mpeg' });
         const a = document.createElement('a');
@@ -145,7 +153,7 @@ export function useStudio() {
         a.download = `${rt.current.name}-${tag}-${v.id}.mp3`;
         a.click();
         setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-        setNotice('');
+        setNotice(null);
       } catch (err) {
         say(err);
       }
@@ -162,5 +170,22 @@ export function useStudio() {
 
   const originalId = store.originalId();
   const info = useMemo(() => (originalId ? store.get(originalId) : null), [originalId, store]);
-  return { store, versions, originalInfo: info, busy, notice, loading, loadFile, run, cancel, importResult, applyPolish, discard, download, name: rt.current.name, clearNotice: () => setNotice('') };
+  return {
+    store,
+    versions,
+    originalInfo: info,
+    busy,
+    notice: notice?.text || '',
+    noticeType: notice?.type || 'status',
+    loading,
+    loadFile,
+    run,
+    cancel,
+    importResult,
+    applyPolish,
+    discard,
+    download,
+    name: rt.current.name,
+    clearNotice: () => setNotice(null),
+  };
 }

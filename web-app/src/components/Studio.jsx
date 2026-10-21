@@ -136,7 +136,16 @@ export default function Studio() {
             </button>
           </div>
         )}
-        {st.notice && <div role="alert" className="alert" style={{ marginTop: '12px' }}>{st.notice}</div>}
+        {st.notice && (
+          <div
+            role={st.noticeType === 'error' ? 'alert' : 'status'}
+            aria-live="polite"
+            className={st.noticeType === 'error' ? 'alert' : 'status-notice'}
+            style={{ marginTop: '12px' }}
+          >
+            {st.notice}
+          </div>
+        )}
       </section>
 
       {/* AI Enhancement Engines */}
