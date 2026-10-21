@@ -60,12 +60,15 @@ export default function Studio() {
             <p className="studio-subtitle">Professional on-device AI speech enhancement &amp; audio mastering</p>
           </div>
         </div>
-        <div className="privacy-badge">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
-          <span>100% Private &amp; On-Device</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <a href="#help" style={{ fontSize: '0.85rem', color: '#94a3b8', textDecoration: 'none' }}>Help &amp; Guide</a>
+          <div className="privacy-badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <span>100% Private &amp; On-Device</span>
+          </div>
         </div>
       </header>
 
@@ -75,32 +78,37 @@ export default function Studio() {
           <h2 id="src-h" style={{ margin: 0 }}>Input Recording</h2>
         </div>
         {!orig && (
-          <label
-            className={`drop${drag ? ' over' : ''}`}
-            onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
-            onDragLeave={() => setDrag(false)}
-            onDrop={(e) => { e.preventDefault(); setDrag(false); onFile(e.dataTransfer.files?.[0]); }}
-          >
-            <div className="drop-icon">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="17 8 12 3 7 8" />
-                <line x1="12" y1="3" x2="12" y2="15" />
-              </svg>
-            </div>
-            <span className="drop-title">
-              {st.loading ? 'Reading and decoding audio...' : 'Drop audio or video here, or click to browse'}
-            </span>
-            <span className="drop-subtitle">
-              Supports WAV, MP3, M4A, OGG, WebM, MP4 &bull; Up to {durationLimitMinutes(navigator.deviceMemory || 4)} min
-            </span>
-            <input
-              type="file"
-              accept="audio/*,video/mp4,video/webm"
-              disabled={st.loading}
-              onChange={(e) => onFile(e.target.files?.[0])}
-            />
-          </label>
+          <>
+            <label
+              className={`drop${drag ? ' over' : ''}`}
+              onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+              onDragLeave={() => setDrag(false)}
+              onDrop={(e) => { e.preventDefault(); setDrag(false); onFile(e.dataTransfer.files?.[0]); }}
+            >
+              <div className="drop-icon">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+              </div>
+              <span className="drop-title">
+                {st.loading ? 'Reading and decoding audio...' : 'Drop audio or video here, or click to browse'}
+              </span>
+              <span className="drop-subtitle">
+                Supports WAV, MP3, M4A, OGG, WebM, MP4 &bull; Up to {durationLimitMinutes(navigator.deviceMemory || 4)} min
+              </span>
+              <input
+                type="file"
+                accept="audio/*,video/mp4,video/webm"
+                disabled={st.loading}
+                onChange={(e) => onFile(e.target.files?.[0])}
+              />
+            </label>
+            <p style={{ marginTop: '0.6rem', marginBottom: 0, fontSize: '0.85rem', color: '#94a3b8', textAlign: 'center' }}>
+              New here? <a href="#help" style={{ color: '#38bdf8', textDecoration: 'underline' }}>Read the 2-minute guide</a>.
+            </p>
+          </>
         )}
         {orig && (
           <div className="audio-meta-card">
