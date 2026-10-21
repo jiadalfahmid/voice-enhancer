@@ -24,6 +24,32 @@ export function versionTitle(store, v) {
   return `Stage ${stage}: ${v.label || engineLabel(v.engineId)}`;
 }
 
+export function friendlyErrorMessage(err) {
+  if (!err) return 'Something went wrong.';
+  if (err.name === 'AbortError' || err.message === 'cancelled') {
+    return 'Cancelled. Your earlier results are untouched.';
+  }
+  const msg = err.message || String(err);
+  const code = err.code || '';
+
+  if (code === 'MEMORY_BUDGET' || msg.includes('Memory budget') || msg.includes('canFit')) {
+    return 'Not enough free memory to process this audio. Try a shorter clip or close other tabs.';
+  }
+  if (code === 'WORKER_CRASHED' || msg.includes('out of memory') || msg.includes('OOM') || msg.includes('memory access out of bounds')) {
+    return 'The processing engine ran out of memory. Try a shorter clip or use a desktop browser.';
+  }
+  if (code === 'DECODE_FAILED' || msg.includes('decodeAudioData') || msg.includes('Could not read this file')) {
+    return 'Could not decode audio. Please check the file format (WAV, MP3, M4A, OGG, WebM, MP4 supported).';
+  }
+  if (msg.includes('fetch failed') || msg.includes('Failed to fetch') || msg.includes('network') || msg.includes('NetworkError')) {
+    return 'Could not download the model files. Check your internet connection and try again.';
+  }
+  if (code === 'TOO_LONG' || code === 'TOO_LARGE') {
+    return msg;
+  }
+  return msg || 'An unexpected error occurred. Please try again.';
+}
+
 export function useStudio() {
   const rt = useRef(null);
   if (!rt.current) {
@@ -43,10 +69,10 @@ export function useStudio() {
 
   const say = (e) => {
     if (!e) { setNotice(null); return; }
-    if (e.name === 'AbortError') {
+    if (e.name === 'AbortError' || e.message === 'cancelled') {
       setNotice({ text: 'Cancelled. Your earlier results are untouched.', type: 'status' });
     } else {
-      setNotice({ text: e.message || 'Something went wrong.', type: 'error' });
+      setNotice({ text: friendlyErrorMessage(e), type: 'error' });
     }
   };
   const setStatus = (text) => setNotice(text ? { text, type: 'status' } : null);

@@ -208,4 +208,29 @@ test('useStudio reset clears versions without recreating engines', async () => {
   assert.equal(hooks[0].current.engines, enginesBefore, 'engine adapters preserved on reset');
 });
 
+test('friendlyErrorMessage maps technical errors into actionable user notices', async () => {
+  const { friendlyErrorMessage } = await import('../../src/studio/useStudio.js');
+  assert.equal(
+    friendlyErrorMessage({ code: 'MEMORY_BUDGET', message: 'store budget exceeded' }),
+    'Not enough free memory to process this audio. Try a shorter clip or close other tabs.'
+  );
+  assert.equal(
+    friendlyErrorMessage(new Error('fetch failed: 404')),
+    'Could not download the model files. Check your internet connection and try again.'
+  );
+  assert.equal(
+    friendlyErrorMessage({ code: 'WORKER_CRASHED', message: 'The processing engine crashed' }),
+    'The processing engine ran out of memory. Try a shorter clip or use a desktop browser.'
+  );
+  assert.equal(
+    friendlyErrorMessage({ code: 'DECODE_FAILED', message: 'Could not read this file' }),
+    'Could not decode audio. Please check the file format (WAV, MP3, M4A, OGG, WebM, MP4 supported).'
+  );
+  assert.equal(
+    friendlyErrorMessage({ name: 'AbortError', message: 'cancelled' }),
+    'Cancelled. Your earlier results are untouched.'
+  );
+});
+
+
 
