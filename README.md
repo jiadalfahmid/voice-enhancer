@@ -2,7 +2,6 @@
 
 **ClearVoice Studio** is a professional, client-side web application for AI speech enhancement, dynamic vocal leveling, and audio mastering that runs **100% on-device** in modern web browsers.
 
-[![CI](https://github.com/owner/clearvoice-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/owner/clearvoice-studio/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Privacy: 100% On-Device](https://img.shields.io/badge/Privacy-100%25%20On--Device-success.svg)](docs/PRIVACY.md)
 [![Runtime: WebAssembly & ONNX](https://img.shields.io/badge/Runtime-WASM%20%7C%20ONNX%20Web-purple.svg)](docs/ARCHITECTURE.md)
@@ -13,7 +12,7 @@
 ## 🚀 Live Demo
 
 Experience ClearVoice Studio directly in your web browser:  
-🔗 **[https://clearvoice-studio.pages.dev](https://clearvoice-studio.pages.dev)** *(Zero server uploads &bull; Works offline)*
+🔗 **[https://clear-voice-studio.pages.dev](https://clear-voice-studio.pages.dev)** *(Zero server uploads &bull; Works offline)*
 
 ---
 
