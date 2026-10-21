@@ -1,8 +1,41 @@
-ClearVoice Studio: third-party components (verify each against the exact files you ship)
+ClearVoice Studio: third-party components and licenses
+Everything below runs on your device. Full license texts are in /licenses/.
 
-GTCRN (gtcrn_simple.onnx)      MIT       speech enhancement model
-onnxruntime-web                MIT       in-browser ONNX runtime (WASM files copied to /ort)
-@breezystack/lamejs            LGPL-3.0  MP3 encoder, loaded only when MP3 export is used; keep it separable
-React, React DOM               MIT
+AI models (loaded from this site, run locally in your browser)
 
-Add a line here for every model you integrate (name, license, where the weights came from) before you deploy.
+1. GTCRN (gtcrn_simple.onnx), 16 kHz speech enhancement
+   License: MIT
+   Source: https://github.com/Xiaobin-Rong/gtcrn (pinned commit 3862c44808dca492ea5a8a145d2dc2a1028d08c8 in models/README.md)
+   Copyright: Copyright (c) 2023 Xiaobin-Rong
+   Text: /licenses/MIT-gtcrn.txt
+
+2. DeepFilterNet3 (df_bg.wasm + DeepFilterNet3_onnx.bin), 48 kHz speech enhancement
+   License: MIT OR Apache-2.0 (your choice; this site uses it under MIT OR Apache-2.0 as published upstream)
+   Source: https://github.com/Rikorose/DeepFilterNet
+   Authors: Hendrik Schroeter and contributors
+   WebAssembly build provenance: Built from DeepFilterNet Rust libDF via wasm-bindgen. TODO(owner): record exact commit/tag for binary wasm rebuild
+   Text: /licenses/MIT-OR-Apache-2.0-deepfilternet.txt
+
+3. DPDFNet 16 kHz and 48 kHz (dpdfnet_baseline.onnx, dpdfnet_48k.onnx), speech enhancement
+   License: Apache-2.0 (per the model card; owner to confirm for these exact files)
+   Source: https://huggingface.co/Ceva-IP/DPDFNet and https://github.com/ceva-ip/DPDFNet
+   Paper: DPDFNet: Boosting DeepFilterNet2 via Dual-Path RNN (arXiv:2512.16420)
+   Copyright: Copyright (c) 2024 CEVA, Inc.
+   Changes: None to the weights; exported ONNX files are used as published.
+   Text: /licenses/Apache-2.0-dpdfnet.txt
+
+Code libraries
+
+4. ONNX Runtime Web (onnxruntime-web 1.22.0), MIT, Microsoft. Text: /licenses/MIT-onnxruntime.txt
+5. @breezystack/lamejs 1.2.7, LGPL-3.0. Used only for MP3 export and loaded as a separate file
+   on demand. Source: https://github.com/breezystack/lamejs
+   Text: /licenses/LGPL-3.0-lamejs.txt. You may replace that file with your own build of the library.
+6. React and React DOM 18, MIT, Meta Platforms, Inc. Text: /licenses/MIT-react.txt
+
+Build tools (Vite, Vitest, TypeScript) are used to build the site and are not delivered to your browser as separate products.
+
+Model training data: The models above were trained by their authors on data described in their papers and repositories.
+TODO(owner): Add one sentence per model stating what was found about training-data licenses (e.g. DNS Challenge, LibriTTS, VCTK).
+
+Trademarks: Product and project names belong to their owners. No endorsement is implied.
+Last updated: 2026-10-21
