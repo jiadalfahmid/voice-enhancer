@@ -2,7 +2,12 @@
   "name": "voice-enhancer-web",
   "private": true,
   "version": "0.0.1",
+  "description": "Professional on-device AI speech enhancement studio running 100% in the browser",
+  "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
@@ -10,7 +15,8 @@
     "test": "vitest run",
     "postinstall": "node scripts/copy-ort.mjs",
     "test:studio": "node --experimental-strip-types --test tests/studio/*.nodetest.ts tests/studio/*.nodetest.js",
-    "typecheck:studio": "tsc -p tsconfig.studio.json"
+    "typecheck:studio": "tsc -p tsconfig.studio.json",
+    "check": "npm run typecheck:studio && npm test && npm run test:studio"
   },
   "dependencies": {
     "@breezystack/lamejs": "1.2.7",
