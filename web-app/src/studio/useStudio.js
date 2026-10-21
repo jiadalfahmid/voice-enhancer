@@ -30,14 +30,6 @@ export function useStudio() {
     const store = new VersionStore(storeBudgetBytes(mem()));
     // one worker per engine and one job at a time: workers keep a single result cache
     rt.current = { engines, store, co: new JobCoordinator(store, engines, 1), handle: null, name: 'audio' };
-  } else {
-    // Keep engines Map synced if new engines are added or catalog changes
-    const fresh = buildEngines();
-    for (const [id, eng] of fresh) {
-      if (!rt.current.engines.has(id)) {
-        rt.current.engines.set(id, eng);
-      }
-    }
   }
   const [, setTick] = useState(0);
   const refresh = useCallback(() => setTick((t) => t + 1), []);
@@ -68,14 +60,6 @@ export function useStudio() {
   const run = useCallback(async (parentId, engineId) => {
     if (busy) return;
     setNotice(''); setBusy({ engineId, parentId, progress: 0 });
-    if (!rt.current.engines.has(engineId)) {
-      const fresh = buildEngines();
-      for (const [id, e] of fresh) {
-        if (!rt.current.engines.has(id)) {
-          rt.current.engines.set(id, e);
-        }
-      }
-    }
     const handle = rt.current.co.enqueue(parentId, engineId, { onProgress: (p) => setBusy((b) => (b ? { ...b, progress: p } : b)) });
     rt.current.handle = handle;
     try { await handle.promise; } catch (e) { say(e); } finally { rt.current.handle = null; setBusy(null); refresh(); }

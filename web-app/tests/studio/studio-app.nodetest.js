@@ -102,3 +102,32 @@ test('voice polish: balances and equalizes audio and registers cleanly in Versio
   assert.equal(res.label, 'Voice Polish: Podcast');
 });
 
+test('engine adapters are built once and not rebuilt across multiple renders or runs', async () => {
+  const React = await import('react');
+  const { useStudio } = await import('../../src/studio/useStudio.js');
+  let hooks = [], idx = 0;
+  const disp = {
+    useRef: (init) => { const i = idx++; if (!hooks[i]) hooks[i] = { current: init }; return hooks[i]; },
+    useState: (init) => { const i = idx++; if (hooks[i] === undefined) hooks[i] = typeof init === 'function' ? init() : init; return [hooks[i], (v) => { hooks[i] = typeof v === 'function' ? v(hooks[i]) : v; }]; },
+    useCallback: (fn) => fn,
+    useMemo: (fn) => fn(),
+  };
+  function render() {
+    idx = 0;
+    React.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED.ReactCurrentDispatcher.current = disp;
+    return useStudio();
+  }
+  const s1 = render();
+  const enginesInitial = hooks[0].current.engines;
+  const s2 = render();
+  const s3 = render();
+  assert.equal(hooks[0].current.engines, enginesInitial, 'engines Map is identical across multiple renders');
+
+  // Verify that all engine instances inside the map are untouched
+  const gtcrnEngine = enginesInitial.get('gtcrn');
+  assert.ok(gtcrnEngine, 'gtcrn engine exists in catalog');
+
+  const s4 = render();
+  assert.equal(hooks[0].current.engines.get('gtcrn'), gtcrnEngine, 'engine instances are not replaced on render');
+});
+
