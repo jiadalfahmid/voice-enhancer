@@ -1,0 +1,11 @@
+node_modules/
+dist/
+public/ort/
+.venv*
+*.stale
+*.before-*
+.integration-backup/
+coverage/
+.env*
+.DS_Store
+Thumbs.db

@@ -1,0 +1,24 @@
+# Dependencies & build outputs
+node_modules/
+dist/
+coverage/
+
+# Public large runtime binary downloads
+web-app/public/ort/
+public/ort/
+
+# Virtual environments & backup dirs
+.venv*
+*.stale
+*.before-*
+.integration-backup/
+web-app-backup*/
+.chrome-temp/
+.model-inspect/
+scratch/
+
+# Archives & env
+*.zip
+.env*
+.DS_Store
+Thumbs.db

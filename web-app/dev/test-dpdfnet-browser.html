@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>DPDFNet In-Browser Verification</title>
+</head>
+<body>
+  <h1>DPDFNet Browser Test</h1>
+  <div id="status">INITIALIZING</div>
+  <pre id="output"></pre>
+  <script type="module">
+    import { createFileJob } from './src/audio/file-client.js';
+
+    async function reportToServer(data) {
+      try {
+        await fetch('http://127.0.0.1:5174/report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+      } catch (e) {
+        console.warn('Could not post report:', e);
+      }
+    }
+
+    async function runTest() {
+      const out = document.getElementById('output');
+      const status = document.getElementById('status');
+      const logs = [];
+      const log = (msg) => {
+        logs.push(msg);
+        out.textContent += msg + '\n';
+        console.log(msg);
+      };
+
+      try {
+        log('Initializing DPDFNet browser validation...');
+        const job = createFileJob();
+        const sampleRate = 16000;
+        const length = sampleRate * 1; // 1 second
+        const signal = new Float32Array(length);
+        for (let i = 0; i < length; i++) {
+          signal[i] = 0.2 * Math.sin(2 * Math.PI * 440 * i / sampleRate);
+        }
+
+        log('Posting process message to Web Worker with dpdfnet-16k...');
+        const progress = [];
+        const processRes = await job.process({
+          channels: [signal],
+          sampleRate,
+          options: { modelId: 'dpdfnet-16k' },
+        }, {
+          onProgress: (p) => {
+            progress.push(p);
+            log('Progress: ' + (p * 100).toFixed(1) + '%');
+          },
+          onStatus: (t) => log('Status: ' + t),
+        });
+
+        log('Process complete: ' + JSON.stringify(processRes));
+        log('Rendering output...');
+        const renderRes = await job.render({ strength: 1, normalize: true, useLimiter: true });
+        log('Rendered channels: ' + renderRes.channels.length + ', length: ' + renderRes.channels[0].length);
+        const lufsStr = renderRes.stats ? renderRes.stats.lufs?.toFixed(2) : 'N/A';
+        const gainStr = renderRes.stats ? renderRes.stats.gainDb?.toFixed(2) : 'N/A';
+        log('Render stats: LUFS=' + lufsStr + ', gainDb=' + gainStr);
+
+        const success = renderRes.channels[0].length === length;
+        if (success) {
+          status.textContent = 'SUCCESS: BROWSER_INFERENCE_VALIDATED';
+          log('SUCCESS: In-browser inference and pipeline execution passed!');
+        } else {
+          status.textContent = 'FAILURE: Length mismatch';
+        }
+
+        await reportToServer({
+          status: success ? 'SUCCESS' : 'FAILURE',
+          logs,
+          renderRes: {
+            channels: renderRes.channels.length,
+            length: renderRes.channels[0].length,
+            stats: renderRes.stats,
+          },
+        });
+      } catch (err) {
+        status.textContent = 'ERROR';
+        log('Test error: ' + (err && err.message) + '\n' + (err && err.stack));
+        await reportToServer({
+          status: 'ERROR',
+          error: String(err && err.message),
+          stack: String(err && err.stack),
+          logs,
+        });
+      }
+    }
+
+    runTest();
+  </script>
+</body>
+</html>

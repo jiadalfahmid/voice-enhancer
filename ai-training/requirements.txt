@@ -1,0 +1,6 @@
+numpy
+scipy
+soundfile
+# install PyTorch from https://pytorch.org/get-started/locally/ (pick your CUDA/CPU build), then:
+# torch
+tensorboard    # optional

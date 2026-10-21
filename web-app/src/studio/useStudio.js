@@ -1,0 +1,165 @@
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { VersionStore } from './versions.ts';
+import { JobCoordinator } from './coordinator.ts';
+import { ENGINE_CATALOG } from './engines.ts';
+import { buildEngines } from './runtime.js';
+import { decodeAudioFile, UserError } from '../audio/file-client.js';
+import { resampleChunked } from '../audio/resample-async.js';
+import { encodeWavParts } from '../audio/encode-wav.js';
+import { encodeMp3 } from '../audio/encode-mp3.js';
+import { loadMp3 } from '../workers/load-mp3.js';
+import { durationLimitMinutes, storeBudgetBytes, fitLength, matchChannels, safeName } from './audioTools.js';
+import { applyVoicePolish } from '../audio/voice-polish.js';
+
+const mem = () => (typeof navigator !== 'undefined' && navigator.deviceMemory) || 4;
+
+export function engineLabel(id) {
+  return ENGINE_CATALOG.find((e) => e.id === id)?.label ?? id;
+}
+
+export function versionTitle(store, v) {
+  if (v.kind === 'original') return 'Original';
+  const stage = store.lineage(v.id).length - 1;
+  return `Stage ${stage}: ${v.label || engineLabel(v.engineId)}`;
+}
+
+export function useStudio() {
+  const rt = useRef(null);
+  if (!rt.current) {
+    const engines = buildEngines();
+    const store = new VersionStore(storeBudgetBytes(mem()));
+    // one worker per engine and one job at a time: workers keep a single result cache
+    rt.current = { engines, store, co: new JobCoordinator(store, engines, 1), handle: null, name: 'audio' };
+  } else {
+    // Keep engines Map synced if new engines are added or catalog changes
+    const fresh = buildEngines();
+    for (const [id, eng] of fresh) {
+      if (!rt.current.engines.has(id)) {
+        rt.current.engines.set(id, eng);
+      }
+    }
+  }
+  const [, setTick] = useState(0);
+  const refresh = useCallback(() => setTick((t) => t + 1), []);
+  const [busy, setBusy] = useState(null); // {engineId, parentId, progress}
+  const [notice, setNotice] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const store = rt.current.store;
+  const versions = store.list();
+
+  const say = (e) => setNotice(e?.name === 'AbortError' ? 'Cancelled. Your earlier results are untouched.' : (e?.message || 'Something went wrong.'));
+
+  const loadFile = useCallback(async (file) => {
+    if (!file) return;
+    setNotice(''); setLoading(true);
+    try {
+      const decoded = await decodeAudioFile(file);
+      const limit = durationLimitMinutes(mem());
+      if (decoded.duration > limit * 60) throw new UserError(`This recording is ${Math.round(decoded.duration / 60)} minutes long. On this device the limit is ${limit} minutes: trim it first, or use a computer.`, 'TOO_LONG');
+      const fresh = new VersionStore(storeBudgetBytes(mem()));
+      fresh.setOriginal({ channels: decoded.channels, sampleRate: decoded.sampleRate });
+      rt.current.store = fresh;
+      rt.current.co = new JobCoordinator(fresh, rt.current.engines, 1);
+      rt.current.name = safeName(file.name);
+    } catch (e) { say(e); } finally { setLoading(false); refresh(); }
+  }, [refresh]);
+
+  const run = useCallback(async (parentId, engineId) => {
+    if (busy) return;
+    setNotice(''); setBusy({ engineId, parentId, progress: 0 });
+    if (!rt.current.engines.has(engineId)) {
+      const fresh = buildEngines();
+      for (const [id, e] of fresh) {
+        if (!rt.current.engines.has(id)) {
+          rt.current.engines.set(id, e);
+        }
+      }
+    }
+    const handle = rt.current.co.enqueue(parentId, engineId, { onProgress: (p) => setBusy((b) => (b ? { ...b, progress: p } : b)) });
+    rt.current.handle = handle;
+    try { await handle.promise; } catch (e) { say(e); } finally { rt.current.handle = null; setBusy(null); refresh(); }
+  }, [busy, refresh]);
+
+  const cancel = useCallback(() => rt.current.handle?.cancel(), []);
+
+  /** Add a result made elsewhere (for example Resemble Enhance run on your computer). */
+  const importResult = useCallback(async (file) => {
+    const s = rt.current.store;
+    const origId = s.originalId();
+    if (!file || !origId) return;
+    setNotice('');
+    try {
+      const o = s.get(origId);
+      const d = await decodeAudioFile(file);
+      let chs = d.channels;
+      if (d.sampleRate !== o.sampleRate) chs = await Promise.all(chs.map((c) => resampleChunked(c, d.sampleRate, o.sampleRate)));
+      chs = fitLength(matchChannels(chs, o.audio.channels.length), o.length);
+      s.addResult(origId, 'external', { channels: chs, sampleRate: o.sampleRate }, 0, `Imported: ${file.name}`);
+    } catch (e) { say(e); } finally { refresh(); }
+  }, [refresh]);
+
+  const applyPolish = useCallback((parentId, options, label) => {
+    const s = rt.current.store;
+    const parent = s.get(parentId);
+    if (!parent?.audio) return null;
+    setNotice('');
+    const t0 = Date.now();
+    try {
+      const outChannels = applyVoicePolish(parent.audio.channels, parent.audio.sampleRate, options);
+      const v = s.addResult(
+        parentId,
+        'voice-polish',
+        { channels: outChannels, sampleRate: parent.audio.sampleRate },
+        Date.now() - t0,
+        label || 'Voice Polish'
+      );
+      refresh();
+      return v.id;
+    } catch (e) {
+      say(e);
+      return null;
+    }
+  }, [refresh]);
+
+  const discard = useCallback((id) => { try { rt.current.store.discard(id); } catch (e) { say(e); } refresh(); }, [refresh]);
+
+  const download = useCallback(async (id, format = 'wav16') => {
+    const v = rt.current.store.get(id);
+    if (!v?.audio) return;
+    const tag = v.kind === 'original' ? 'original' : (v.label ? 'imported' : v.engineId);
+
+    if (typeof format === 'string' && format.startsWith('mp3')) {
+      const kbps = parseInt(format.replace('mp3-', ''), 10) || 192;
+      setNotice('Encoding MP3...');
+      try {
+        const Mp3Encoder = await loadMp3();
+        const parts = await encodeMp3(v.audio.channels, v.audio.sampleRate, kbps, {
+          Mp3Encoder,
+          onProgress: (p) => setNotice(`Encoding MP3: ${Math.round(p * 100)}%`),
+        });
+        const blob = new Blob(parts, { type: 'audio/mpeg' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${rt.current.name}-${tag}-${v.id}.mp3`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        setNotice('');
+      } catch (err) {
+        say(err);
+      }
+    } else {
+      const bits = format === 'wav24' || format === 24 ? 24 : 16;
+      const parts = encodeWavParts(v.audio.channels, v.audio.sampleRate, bits);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob(parts, { type: 'audio/wav' }));
+      a.download = `${rt.current.name}-${tag}-${v.id}.wav`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+  }, []);
+
+  const originalId = store.originalId();
+  const info = useMemo(() => (originalId ? store.get(originalId) : null), [originalId, store]);
+  return { store, versions, originalInfo: info, busy, notice, loading, loadFile, run, cancel, importResult, applyPolish, discard, download, name: rt.current.name, clearNotice: () => setNotice('') };
+}

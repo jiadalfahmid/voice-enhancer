@@ -1,0 +1,8 @@
+ClearVoice Studio: third-party components (verify each against the exact files you ship)
+
+GTCRN (gtcrn_simple.onnx)      MIT       speech enhancement model
+onnxruntime-web                MIT       in-browser ONNX runtime (WASM files copied to /ort)
+@breezystack/lamejs            LGPL-3.0  MP3 encoder, loaded only when MP3 export is used; keep it separable
+React, React DOM               MIT
+
+Add a line here for every model you integrate (name, license, where the weights came from) before you deploy.
