@@ -130,7 +130,18 @@ export default function Studio() {
             <button
               className="link"
               disabled={!!busy}
-              onClick={() => { setA(null); setB(null); window.location.reload(); }}
+              onClick={() => {
+                if (versions.length > 1) {
+                  if (!window.confirm('Start over with a new recording? Current enhancements will be cleared.')) {
+                    return;
+                  }
+                }
+                setA(null);
+                setB(null);
+                setSecond(null);
+                setPolishId(null);
+                st.reset();
+              }}
             >
               Start Over
             </button>

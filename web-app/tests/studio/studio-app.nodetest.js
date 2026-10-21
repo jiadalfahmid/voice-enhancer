@@ -183,3 +183,29 @@ test('voice polish async: abort signal halts processing and throws AbortError', 
   assert.ok(yielded, 'yielded and aborted mid-flight');
 });
 
+test('useStudio reset clears versions without recreating engines', async () => {
+  const React = await import('react');
+  const { useStudio } = await import('../../src/studio/useStudio.js');
+  let hooks = [], idx = 0;
+  const disp = {
+    useRef: (init) => { const i = idx++; if (!hooks[i]) hooks[i] = { current: init }; return hooks[i]; },
+    useState: (init) => { const i = idx++; if (hooks[i] === undefined) hooks[i] = typeof init === 'function' ? init() : init; return [hooks[i], (v) => { hooks[i] = typeof v === 'function' ? v(hooks[i]) : v; }]; },
+    useCallback: (fn) => fn,
+    useMemo: (fn) => fn(),
+  };
+  function render() {
+    idx = 0;
+    React.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED.ReactCurrentDispatcher.current = disp;
+    return useStudio();
+  }
+  const s = render();
+  const enginesBefore = hooks[0].current.engines;
+  s.store.setOriginal({ channels: [new Float32Array(100)], sampleRate: 16000 });
+  assert.equal(s.store.list().length, 1);
+  s.reset();
+  const sAfter = render();
+  assert.equal(sAfter.store.list().length, 0);
+  assert.equal(hooks[0].current.engines, enginesBefore, 'engine adapters preserved on reset');
+});
+
+

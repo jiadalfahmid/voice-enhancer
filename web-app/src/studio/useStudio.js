@@ -66,6 +66,16 @@ export function useStudio() {
     } catch (e) { say(e); } finally { setLoading(false); refresh(); }
   }, [refresh]);
 
+  const reset = useCallback(() => {
+    const fresh = new VersionStore(storeBudgetBytes(mem()));
+    rt.current.store = fresh;
+    rt.current.co = new JobCoordinator(fresh, rt.current.engines, 1);
+    rt.current.name = 'audio';
+    setNotice(null);
+    setBusy(null);
+    refresh();
+  }, [refresh]);
+
   const run = useCallback(async (parentId, engineId) => {
     if (busy) return;
     setNotice(null); setBusy({ engineId, parentId, progress: 0 });
@@ -181,6 +191,7 @@ export function useStudio() {
     loadFile,
     run,
     cancel,
+    reset,
     importResult,
     applyPolish,
     discard,
