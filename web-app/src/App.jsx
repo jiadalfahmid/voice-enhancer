@@ -33,8 +33,8 @@ export default function App() {
         <p className="hint">{['wasmSimd', 'audioWorklet', 'webgpu'].map((k) => `${k}: ${fmt(caps[k])}`).join(', ')}</p>
         <p className="hint">
           <a href="#help">User Guide</a> &bull;{' '}
-          <a href="/privacy.html">Privacy Notice</a> &bull;{' '}
-          <a href="/THIRD-PARTY-NOTICES.txt">Third-party licenses</a>
+          <a href="/privacy.html" rel="privacy-policy">Privacy Notice</a> &bull;{' '}
+          <a href="/THIRD-PARTY-NOTICES.txt" rel="license">Third-party licenses</a>
         </p>
       </details>
     </>

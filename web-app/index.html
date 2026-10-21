@@ -4,10 +4,26 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="ClearVoice Studio — Client-side AI speech enhancement, voice balancing, and audio mastering." />
-    <meta name="theme-color" content="#0d9488" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#0d9488" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0f17" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta property="og:title" content="ClearVoice Studio — AI Speech Enhancement &amp; Audio Mastering" />
+    <meta property="og:description" content="100% private, on-device AI speech enhancement and audio mastering running directly in your browser." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/og-image.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
     <title>ClearVoice Studio — AI Speech Enhancement &amp; Mastering</title>
   </head>
   <body>
+    <noscript>
+      <div style="font-family: system-ui, sans-serif; max-width: 540px; margin: 40px auto; padding: 24px; text-align: center; border: 1px solid #ef4444; border-radius: 8px; background: #fff; color: #0f172a;">
+        <h2 style="margin-top: 0; color: #dc2626;">JavaScript Required</h2>
+        <p style="line-height: 1.6; color: #475569;">
+          ClearVoice Studio executes AI speech enhancement neural networks entirely on your local device using WebAssembly and Web Workers. Please enable JavaScript in your browser to run the studio.
+        </p>
+      </div>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
