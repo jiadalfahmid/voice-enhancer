@@ -39,40 +39,28 @@ async function fetchWithProgress(url, { onStatus, label = 'model' } = {}) {
   return result;
 }
 
-async function loadGtcrn(opts = {}) {
+async function loadOrtModel(relPath, label, factory, opts = {}) {
   const ort = await import('onnxruntime-web/wasm');
   const base = `${self.location.origin}${import.meta.env.BASE_URL}`;
   ort.env.wasm.wasmPaths = `${base}ort/`;
   ort.env.wasm.numThreads = 1; // one tiny frame per call: threading overhead would cost more than it saves
-  const bytes = await fetchWithProgress(`${base}models/gtcrn_simple.onnx`, { onStatus: opts.onStatus, label: 'GTCRN (1.3 MB)' });
+  const bytes = await fetchWithProgress(`${base}${relPath}`, { onStatus: opts.onStatus, label });
   const session = await ort.InferenceSession.create(bytes, {
     executionProviders: ['wasm'], graphOptimizationLevel: 'all',
   });
-  return createGtcrnModel(ort, session);
+  return factory(ort, session);
 }
 
-async function loadDpdfnet16k(opts = {}) {
-  const ort = await import('onnxruntime-web/wasm');
-  const base = `${self.location.origin}${import.meta.env.BASE_URL}`;
-  ort.env.wasm.wasmPaths = `${base}ort/`;
-  ort.env.wasm.numThreads = 1;
-  const bytes = await fetchWithProgress(`${base}models/dpdfnet_baseline.onnx`, { onStatus: opts.onStatus, label: 'DPDFNet-16k (1.2 MB)' });
-  const session = await ort.InferenceSession.create(bytes, {
-    executionProviders: ['wasm'], graphOptimizationLevel: 'all',
-  });
-  return createDpdfnetModel(ort, session);
+function loadGtcrn(opts = {}) {
+  return loadOrtModel('models/gtcrn_simple.onnx', 'GTCRN (1.3 MB)', createGtcrnModel, opts);
 }
 
-async function loadDpdfnet48k(opts = {}) {
-  const ort = await import('onnxruntime-web/wasm');
-  const base = `${self.location.origin}${import.meta.env.BASE_URL}`;
-  ort.env.wasm.wasmPaths = `${base}ort/`;
-  ort.env.wasm.numThreads = 1;
-  const bytes = await fetchWithProgress(`${base}models/dpdfnet_48k.onnx`, { onStatus: opts.onStatus, label: 'DPDFNet-48k (2.3 MB)' });
-  const session = await ort.InferenceSession.create(bytes, {
-    executionProviders: ['wasm'], graphOptimizationLevel: 'all',
-  });
-  return createDpdfnet48kModel(ort, session);
+function loadDpdfnet16k(opts = {}) {
+  return loadOrtModel('models/dpdfnet_baseline.onnx', 'DPDFNet-16k (1.2 MB)', createDpdfnetModel, opts);
+}
+
+function loadDpdfnet48k(opts = {}) {
+  return loadOrtModel('models/dpdfnet_48k.onnx', 'DPDFNet-48k (2.3 MB)', createDpdfnet48kModel, opts);
 }
 
 async function loadDeepfilternet3(opts = {}) {
