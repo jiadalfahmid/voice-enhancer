@@ -3,6 +3,7 @@ import { detectCapabilities } from './audio/capabilities.js';
 import EnhancerUI from './components/EnhancerUI.jsx';
 import Studio from './components/Studio.jsx';
 import HelpView from './components/HelpView.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 import './studio.css';
 
 const caps = detectCapabilities();
@@ -34,7 +35,9 @@ export default function App() {
 
   return (
     <>
-      <Studio />
+      <ErrorBoundary>
+        <Studio />
+      </ErrorBoundary>
       <details className="studio" style={{ paddingTop: 0 }}>
         <summary>Device &amp; legal details</summary>
         <p className="hint">{caps.crossOriginIsolated ? 'Cross-origin isolated: multi-thread ready.' : 'Not cross-origin isolated: single-thread mode.'}</p>
