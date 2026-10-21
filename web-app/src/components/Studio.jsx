@@ -286,8 +286,8 @@ export default function Studio() {
               store={store}
               versionId={polishId}
               onClose={() => setPolishId(null)}
-              onApply={(id, opts, label) => {
-                const newId = st.applyPolish(id, opts, label);
+              onApply={async (id, opts, label) => {
+                const newId = await st.applyPolish(id, opts, label);
                 if (newId) {
                   setA(id);
                   setB(newId);

@@ -9,11 +9,12 @@ import { encodeWavParts } from '../audio/encode-wav.js';
 import { encodeMp3 } from '../audio/encode-mp3.js';
 import { loadMp3 } from '../workers/load-mp3.js';
 import { durationLimitMinutes, storeBudgetBytes, fitLength, matchChannels, safeName } from './audioTools.js';
-import { applyVoicePolish } from '../audio/voice-polish.js';
+import { applyVoicePolish, applyVoicePolishAsync } from '../audio/voice-polish.js';
 
 const mem = () => (typeof navigator !== 'undefined' && navigator.deviceMemory) || 4;
 
 export function engineLabel(id) {
+  if (id === 'voice-polish') return 'Voice Polish';
   return ENGINE_CATALOG.find((e) => e.id === id)?.label ?? id;
 }
 
@@ -83,14 +84,26 @@ export function useStudio() {
     } catch (e) { say(e); } finally { refresh(); }
   }, [refresh]);
 
-  const applyPolish = useCallback((parentId, options, label) => {
+  const applyPolish = useCallback(async (parentId, options, label) => {
+    if (busy) return null;
     const s = rt.current.store;
     const parent = s.get(parentId);
     if (!parent?.audio) return null;
     setNotice('');
+    setBusy({ engineId: 'voice-polish', parentId, progress: 0 });
+    const abortCtrl = new AbortController();
+    rt.current.handle = { cancel: () => abortCtrl.abort() };
     const t0 = Date.now();
     try {
-      const outChannels = applyVoicePolish(parent.audio.channels, parent.audio.sampleRate, options);
+      const outChannels = await applyVoicePolishAsync(
+        parent.audio.channels,
+        parent.audio.sampleRate,
+        options,
+        {
+          signal: abortCtrl.signal,
+          onProgress: (p) => setBusy((b) => (b ? { ...b, progress: p } : b)),
+        }
+      );
       const v = s.addResult(
         parentId,
         'voice-polish',
@@ -103,8 +116,12 @@ export function useStudio() {
     } catch (e) {
       say(e);
       return null;
+    } finally {
+      rt.current.handle = null;
+      setBusy(null);
+      refresh();
     }
-  }, [refresh]);
+  }, [busy, refresh]);
 
   const discard = useCallback((id) => { try { rt.current.store.discard(id); } catch (e) { say(e); } refresh(); }, [refresh]);
 

@@ -131,3 +131,55 @@ test('engine adapters are built once and not rebuilt across multiple renders or 
   assert.equal(hooks[0].current.engines.get('gtcrn'), gtcrnEngine, 'engine instances are not replaced on render');
 });
 
+test('voice polish async: matches synchronous output and reports progress', async () => {
+  const { applyVoicePolish, applyVoicePolishAsync } = await import('../../src/audio/voice-polish.js');
+  const rate = 16000;
+  const n = rate * 2;
+  const input = [noisy(n, rate)];
+  const options = {
+    balancer: { enabled: true, strength: 0.8 },
+    equalizer: { enabled: true, ...VOICE_EQ_PRESETS.podcast },
+  };
+
+  const syncOut = applyVoicePolish(input, rate, options);
+
+  const progress = [];
+  const asyncOut = await applyVoicePolishAsync(input, rate, options, {
+    onProgress: (p) => progress.push(p),
+  });
+
+  assert.equal(asyncOut.length, syncOut.length);
+  assert.equal(asyncOut[0].length, syncOut[0].length);
+  // Should match within numerical float precision
+  for (let i = 0; i < n; i++) {
+    assert.ok(Math.abs(asyncOut[0][i] - syncOut[0][i]) < 1e-5);
+  }
+  assert.ok(progress.length > 0);
+  assert.equal(progress.at(-1), 1.0);
+});
+
+test('voice polish async: abort signal halts processing and throws AbortError', async () => {
+  const { applyVoicePolishAsync } = await import('../../src/audio/voice-polish.js');
+  const rate = 48000;
+  const n = rate * 5; // 5 seconds of audio
+  const input = [noisy(n, rate)];
+  const ctrl = new AbortController();
+
+  let yielded = false;
+  const promise = applyVoicePolishAsync(input, rate, {
+    balancer: { enabled: true, strength: 0.9 },
+    equalizer: { enabled: true, ...VOICE_EQ_PRESETS.podcast },
+  }, {
+    signal: ctrl.signal,
+    onProgress: (p) => {
+      if (p > 0.05) {
+        yielded = true;
+        ctrl.abort();
+      }
+    },
+  });
+
+  await assert.rejects(promise, (err) => err.name === 'AbortError');
+  assert.ok(yielded, 'yielded and aborted mid-flight');
+});
+
