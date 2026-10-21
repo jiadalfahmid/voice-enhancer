@@ -232,5 +232,31 @@ test('friendlyErrorMessage maps technical errors into actionable user notices', 
   );
 });
 
+test('enhancement options (strength, mono, echo, depth) pass cleanly through coordinator and label version', async () => {
+  let capturedOpts = null;
+  const mockEngine = {
+    info: { id: 'mock-engine', label: 'Mock Engine', availability: 'browser-ready', runtime: 'ort-web', sampleRate: 16000, license: 'MIT' },
+    async load() {},
+    dispose() {},
+    async run(input, ctx) {
+      capturedOpts = ctx.options;
+      return { sampleRate: input.sampleRate, channels: input.channels.map((c) => c.slice()) };
+    },
+  };
+  const store = new VersionStore();
+  const orig = store.setOriginal({ sampleRate: 16000, channels: [new Float32Array(100)] });
+  const co = new JobCoordinator(store, new Map([['mock-engine', mockEngine]]), 1);
+  const id = await co.enqueue(orig.id, 'mock-engine', {}, { strength: 80, mono: true, echo: 'low', depth: 'strong' }).promise;
+  const res = store.get(id);
+  assert.equal(capturedOpts.strength, 80);
+  assert.equal(capturedOpts.mono, true);
+  assert.equal(capturedOpts.echo, 'low');
+  assert.equal(capturedOpts.depth, 'strong');
+  assert.ok(res.label.includes('80% strength'));
+  assert.ok(res.label.includes('Mono'));
+  assert.ok(res.label.includes('Echo: low'));
+  assert.ok(res.label.includes('Depth: strong'));
+});
+
 
 

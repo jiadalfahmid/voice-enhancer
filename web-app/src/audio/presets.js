@@ -17,13 +17,22 @@ export function applyPreset(settings, id) {
   return { ...settings, ...p };
 }
 
-export function loadSettings(storage = globalThis.localStorage) {
-  try {
-    const raw = storage && storage.getItem(KEY);
-    return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : { ...DEFAULTS };
-  } catch { return { ...DEFAULTS }; }
+let _sessionSettings = null;
+
+export function loadSettings(storage = null) {
+  if (storage) {
+    try {
+      const raw = storage.getItem(KEY);
+      return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : { ...DEFAULTS };
+    } catch { return { ...DEFAULTS }; }
+  }
+  return _sessionSettings ? { ...DEFAULTS, ..._sessionSettings } : { ...DEFAULTS };
 }
 
-export function saveSettings(settings, storage = globalThis.localStorage) {
-  try { storage && storage.setItem(KEY, JSON.stringify(settings)); } catch { /* storage may be blocked; the app still works */ }
+export function saveSettings(settings, storage = null) {
+  if (storage) {
+    try { storage.setItem(KEY, JSON.stringify(settings)); } catch { /* ignore */ }
+  } else {
+    _sessionSettings = { ...settings };
+  }
 }

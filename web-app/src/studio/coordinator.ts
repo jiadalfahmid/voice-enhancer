@@ -67,7 +67,7 @@ export class JobCoordinator {
   }
 
   /** Process `parentId` with `engineId`. Resolves with the new version id; failures are stored and never touch existing results. */
-  enqueue(parentId: string, engineId: string, events: JobEvents = {}): JobHandle {
+  enqueue(parentId: string, engineId: string, events: JobEvents = {}, options?: Record<string, any>): JobHandle {
     const ctrl = new AbortController();
     let st: ReturnType<JobHandle['state']> = 'queued';
     const promise = new Promise<string>((resolve, reject) => {
@@ -92,10 +92,20 @@ export class JobCoordinator {
             signal: ctrl.signal,
             onProgress: (f) => events.onProgress?.(f),
             onStatus: (s) => events.onStatus?.(s),
+            options,
           });
           if (ctrl.signal.aborted) throw new DOMException('cancelled', 'AbortError');
           if (Math.abs(out.channels[0].length - parent.length) > this.alignmentTolerance) throw new AlignmentError(parent.length, out.channels[0].length);
-          const v = this.store.addResult(parentId, engineId, out, Date.now() - t0);
+          let label: string | undefined = undefined;
+          if (options && (options.strength !== undefined || options.mono || options.depth || options.echo)) {
+            const parts: string[] = [];
+            if (options.strength !== undefined && options.strength < 100) parts.push(`${options.strength}% strength`);
+            if (options.mono) parts.push('Mono');
+            if (options.echo && options.echo !== 'off') parts.push(`Echo: ${options.echo}`);
+            if (options.depth && options.depth !== 'standard') parts.push(`Depth: ${options.depth}`);
+            if (parts.length > 0) label = `${engine.info.label} (${parts.join(', ')})`;
+          }
+          const v = this.store.addResult(parentId, engineId, out, Date.now() - t0, label);
           st = 'done'; resolve(v.id);
         } catch (e) {
           if ((e as Error)?.name === 'AbortError') { st = 'cancelled'; reject(e); }

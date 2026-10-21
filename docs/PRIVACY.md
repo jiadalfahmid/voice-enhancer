@@ -24,7 +24,7 @@ ClearVoice Studio is delivered as static files via static web hosting (e.g., Clo
 
 ### 4. Data Kept in Your Browser
 - **Model Binaries:** Model weight files are downloaded from this site the first time you invoke a model and are cached by your browser's HTTP cache so subsequent runs load instantly. You can clear them at any time by clearing your browser cache.
-- **Cookies & Trackers:** We do not use cookies, advertising trackers, or tracking pixels.
+- **Cookies & Storage:** We do not use cookies, localStorage, indexedDB, or tracking pixels. No user data is stored on your device.
 
 ---
 

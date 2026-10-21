@@ -22,6 +22,7 @@ export interface RunContext {
   signal: AbortSignal;
   onProgress: (fraction: number) => void;
   onStatus?: (status: string) => void;
+  options?: Record<string, any>;
 }
 
 /** Every model integration implements this; internals may differ. */

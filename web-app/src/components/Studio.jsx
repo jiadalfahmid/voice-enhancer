@@ -6,6 +6,7 @@ import { fileModeSupport } from '../audio/capabilities.js';
 import { fmtDuration, durationLimitMinutes } from '../studio/audioTools.js';
 import CompareView from './CompareView.jsx';
 import VoicePolishPanel from './VoicePolishPanel.jsx';
+import { PRESETS, applyPreset, DEFAULTS } from '../audio/presets.js';
 
 const runnable = ENGINE_CATALOG.filter(isRunnable);
 const secs = (ms) => `${(ms / 1000).toFixed(1)} s`;
@@ -19,6 +20,7 @@ export default function Studio() {
   const [polishId, setPolishId] = useState(null);
   const [exportFormat, setExportFormat] = useState('wav16');
   const [drag, setDrag] = useState(false);
+  const [enhanceOpts, setEnhanceOpts] = useState(() => ({ ...DEFAULTS }));
   const { store, versions, originalInfo: orig, busy } = st;
 
   if (!support.supported) {
@@ -164,6 +166,115 @@ export default function Studio() {
         <div className="panel-header">
           <h2 id="eng-h" style={{ margin: 0 }}>Speech Enhancement Models</h2>
         </div>
+
+        {/* Enhancement Presets & Advanced Controls */}
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--muted)', fontWeight: 500 }}>Presets:</span>
+            {Object.entries(PRESETS).map(([id, p]) => (
+              <button
+                key={id}
+                type="button"
+                className="link"
+                style={{
+                  fontSize: '0.82rem',
+                  padding: '3px 9px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--line)',
+                  background: 'var(--panel-subtle)',
+                  color: 'var(--ink)'
+                }}
+                onClick={() => setEnhanceOpts((cur) => applyPreset(cur, id))}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          <details style={{ background: 'var(--panel-subtle)', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', padding: '10px 14px' }}>
+            <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem', color: 'var(--ink)' }}>
+              Advanced Enhancement Settings (Strength, Mono, Echo Reduction)
+            </summary>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginTop: '12px', fontSize: '0.86rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 500 }}>
+                  Strength (Dry/Wet Mix): {enhanceOpts.strength}%
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={enhanceOpts.strength}
+                  onChange={(e) => setEnhanceOpts({ ...enhanceOpts, strength: +e.target.value })}
+                  style={{ width: '100%' }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--muted)' }}>
+                  <span>0% (Dry input)</span>
+                  <span>100% (Full AI)</span>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 500 }}>
+                  Noise Suppression:
+                </label>
+                <select
+                  value={enhanceOpts.depth}
+                  onChange={(e) => setEnhanceOpts({ ...enhanceOpts, depth: e.target.value })}
+                  style={{ width: '100%', padding: '6px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--line)', background: 'var(--panel)', color: 'var(--ink)' }}
+                >
+                  <option value="standard">Standard (balanced)</option>
+                  <option value="strong">Strong</option>
+                  <option value="maximum">Maximum (deep cut)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 500 }}>
+                  Room Echo Reduction:
+                </label>
+                <select
+                  value={enhanceOpts.echo}
+                  onChange={(e) => setEnhanceOpts({ ...enhanceOpts, echo: e.target.value })}
+                  style={{ width: '100%', padding: '6px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--line)', background: 'var(--panel)', color: 'var(--ink)' }}
+                >
+                  <option value="off">Off</option>
+                  <option value="low">Low (small room)</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High (large room)</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', justifyContent: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={enhanceOpts.mono}
+                    onChange={(e) => setEnhanceOpts({ ...enhanceOpts, mono: e.target.checked })}
+                  />
+                  <span>Centre the voice (Mono output)</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={enhanceOpts.hpf}
+                    onChange={(e) => setEnhanceOpts({ ...enhanceOpts, hpf: e.target.checked })}
+                  />
+                  <span>Remove low rumble (HPF 80 Hz)</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={enhanceOpts.clarity}
+                    onChange={(e) => setEnhanceOpts({ ...enhanceOpts, clarity: e.target.checked })}
+                  />
+                  <span>Clarity boost (Presence &amp; air)</span>
+                </label>
+              </div>
+            </div>
+          </details>
+        </div>
+
         <ul className="engines">
           {ENGINE_CATALOG.map((e) => (
             <li key={e.id} className="engine-card">
@@ -182,7 +293,7 @@ export default function Studio() {
                 <button
                   className="btn-primary"
                   disabled={!orig || !!busy}
-                  onClick={() => st.run(origVersion.id, e.id)}
+                  onClick={() => st.run(origVersion.id, e.id, enhanceOpts)}
                 >
                   Enhance Original
                 </button>
@@ -257,7 +368,11 @@ export default function Studio() {
                     {v.kind === 'result' && (
                       <button
                         disabled={!!busy}
-                        onClick={() => { setPolishId(null); setSecond({ parentId: v.id, engineId: runnable[0].id }); }}
+                        onClick={() => {
+                          setPolishId(null);
+                          const diffEngine = runnable.find((e) => e.id !== v.engineId) || runnable[0];
+                          setSecond({ parentId: v.id, engineId: diffEngine.id });
+                        }}
                       >
                         Enhance Again
                       </button>
@@ -337,7 +452,7 @@ export default function Studio() {
                     const s = second;
                     setSecond(null);
                     setA(s.parentId);
-                    await st.run(s.parentId, s.engineId);
+                    await st.run(s.parentId, s.engineId, enhanceOpts);
                   }}
                 >
                   Run Second Pass
