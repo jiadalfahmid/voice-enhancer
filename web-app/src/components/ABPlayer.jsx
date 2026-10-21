@@ -3,15 +3,16 @@ import { computePeaks, gainsFor, loopPosition, CROSSFADE_SECONDS } from '../audi
 import { fmtDuration } from '../studio/audioTools.js';
 
 // A/B player: both versions play in lockstep through two gain nodes; toggling crossfades over 10 ms.
-export default function ABPlayer({ a, b, sampleRate, labelA = 'Original', labelB = 'Enhanced' }) {
+// When singleTrack is true, functions as a high-fidelity single track waveform player.
+export default function ABPlayer({ a, b, sampleRate, labelA = 'Original', labelB = 'Enhanced', singleTrack = false }) {
   const canvasRef = useRef(null);
   const st = useRef({ ctx: null, gA: null, gB: null, bufA: null, bufB: null, srcA: null, srcB: null, startedAt: 0, offset: 0, playing: false, raf: 0 });
   const [playing, setPlaying] = useState(false);
-  const [which, setWhich] = useState('b');
+  const [which, setWhich] = useState(singleTrack ? 'a' : 'b');
   const [pos, setPos] = useState(0);
   const dur = a[0].length / sampleRate;
   const peaksA = useMemo(() => computePeaks(a, 900), [a]);
-  const peaksB = useMemo(() => computePeaks(b, 900), [b]);
+  const peaksB = useMemo(() => (b ? computePeaks(b, 900) : peaksA), [b, peaksA]);
 
   const makeBuffer = (ctx, chs) => {
     const buf = ctx.createBuffer(chs.length, chs[0].length, sampleRate);
@@ -29,11 +30,19 @@ export default function ABPlayer({ a, b, sampleRate, labelA = 'Original', labelB
   const startAt = (offset) => {
     const s = st.current;
     stopSources();
-    for (const [k, buf, g] of [['srcA', s.bufA, s.gA], ['srcB', s.bufB, s.gB]]) {
+    const isSingle = singleTrack || !b;
+    if (isSingle) {
       const src = s.ctx.createBufferSource();
-      src.buffer = buf; src.loop = true; src.loopEnd = buf.duration;
-      src.connect(g); src.start(0, offset);
-      s[k] = src;
+      src.buffer = s.bufA; src.loop = true; src.loopEnd = s.bufA.duration;
+      src.connect(s.gA); src.start(0, offset);
+      s.srcA = src;
+    } else {
+      for (const [k, buf, g] of [['srcA', s.bufA, s.gA], ['srcB', s.bufB, s.gB]]) {
+        const src = s.ctx.createBufferSource();
+        src.buffer = buf; src.loop = true; src.loopEnd = buf.duration;
+        src.connect(g); src.start(0, offset);
+        s[k] = src;
+      }
     }
     s.startedAt = s.ctx.currentTime - offset;
   };
@@ -44,7 +53,13 @@ export default function ABPlayer({ a, b, sampleRate, labelA = 'Original', labelB
       s.ctx = new Ctx();
       s.gA = s.ctx.createGain(); s.gB = s.ctx.createGain();
       s.gA.connect(s.ctx.destination); s.gB.connect(s.ctx.destination);
-      const g = gainsFor(which); s.gA.gain.value = g.a; s.gB.gain.value = g.b;
+      const isSingle = singleTrack || !b;
+      if (isSingle) {
+        s.gA.gain.value = 1;
+        s.gB.gain.value = 0;
+      } else {
+        const g = gainsFor(which); s.gA.gain.value = g.a; s.gB.gain.value = g.b;
+      }
     }
     if (s.ctx.state === 'suspended') s.ctx.resume();
     return s.ctx;
@@ -55,7 +70,8 @@ export default function ABPlayer({ a, b, sampleRate, labelA = 'Original', labelB
     const s = st.current;
     if (!s.ctx) return;
     const p = position();
-    s.bufA = makeBuffer(s.ctx, a); s.bufB = makeBuffer(s.ctx, b);
+    s.bufA = makeBuffer(s.ctx, a);
+    s.bufB = b ? makeBuffer(s.ctx, b) : s.bufA;
     if (s.playing) startAt(Math.min(p, Math.max(0, dur - 0.01)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [a, b]);
@@ -77,13 +93,16 @@ export default function ABPlayer({ a, b, sampleRate, labelA = 'Original', labelB
         g.fillRect(x, y1, Math.max(1, w / n), Math.max(1, y2 - y1));
       }
     };
-    // Clean audio contrast: Version A in slate/blue, Version B in vibrant cyan/emerald
-    paint(peaksA, 'rgba(100, 116, 139, 0.45)');
-    paint(peaksB, 'rgba(13, 148, 136, 0.7)');
+    if (singleTrack || !b) {
+      paint(peaksA, 'rgba(14, 165, 233, 0.8)');
+    } else {
+      paint(peaksA, 'rgba(100, 116, 139, 0.45)');
+      paint(peaksB, 'rgba(13, 148, 136, 0.7)');
+    }
     const px = (position() / dur) * w;
     g.fillStyle = '#ef4444';
     g.fillRect(px, 0, 2, h);
-  }, [peaksA, peaksB, dur]);
+  }, [peaksA, peaksB, dur, singleTrack, b]);
 
   useEffect(() => { draw(); }, [draw, a, b]);
   useEffect(() => {
@@ -181,28 +200,39 @@ export default function ABPlayer({ a, b, sampleRate, labelA = 'Original', labelB
           )}
         </button>
 
-        <div className="ab-switch-group">
-          <button
-            className={`btn-a ${which === 'a' ? 'active' : ''}`}
-            aria-pressed={which === 'a'}
-            onClick={() => choose('a')}
-          >
+        {singleTrack || !b ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', color: 'var(--ink)' }}>
             <span className="dot dot-a" />
-            <strong>A:</strong> {labelA}
-          </button>
-          <button
-            className={`btn-b ${which === 'b' ? 'active' : ''}`}
-            aria-pressed={which === 'b'}
-            onClick={() => choose('b')}
-          >
-            <span className="dot dot-b" />
-            <strong>B:</strong> {labelB}
-          </button>
-        </div>
+            <span><strong>Audio Source:</strong> {labelA}</span>
+          </div>
+        ) : (
+          <div className="ab-switch-group">
+            <button
+              className={`btn-a ${which === 'a' ? 'active' : ''}`}
+              aria-pressed={which === 'a'}
+              onClick={() => choose('a')}
+            >
+              <span className="dot dot-a" />
+              <strong>A:</strong> {labelA}
+            </button>
+            <button
+              className={`btn-b ${which === 'b' ? 'active' : ''}`}
+              aria-pressed={which === 'b'}
+              onClick={() => choose('b')}
+            >
+              <span className="dot dot-b" />
+              <strong>B:</strong> {labelB}
+            </button>
+          </div>
+        )}
       </div>
 
       <p className="hint" style={{ marginTop: '10px', fontSize: '0.82rem' }}>
-        ⌨️ Press <kbd style={{ padding: '2px 5px', borderRadius: '4px', background: 'var(--panel)', border: '1px solid var(--line)', fontFamily: 'monospace' }}>Space</kbd> to play/pause &bull; <kbd style={{ padding: '2px 5px', borderRadius: '4px', background: 'var(--panel)', border: '1px solid var(--line)', fontFamily: 'monospace' }}>A</kbd> / <kbd style={{ padding: '2px 5px', borderRadius: '4px', background: 'var(--panel)', border: '1px solid var(--line)', fontFamily: 'monospace' }}>B</kbd> for instant seamless crossfade (both matched to -20 LUFS).
+        {singleTrack || !b ? (
+          <>⌨️ Press <kbd style={{ padding: '2px 5px', borderRadius: '4px', background: 'var(--panel)', border: '1px solid var(--line)', fontFamily: 'monospace' }}>Space</kbd> to play/pause &bull; Click or drag waveform to seek.</>
+        ) : (
+          <>⌨️ Press <kbd style={{ padding: '2px 5px', borderRadius: '4px', background: 'var(--panel)', border: '1px solid var(--line)', fontFamily: 'monospace' }}>Space</kbd> to play/pause &bull; <kbd style={{ padding: '2px 5px', borderRadius: '4px', background: 'var(--panel)', border: '1px solid var(--line)', fontFamily: 'monospace' }}>A</kbd> / <kbd style={{ padding: '2px 5px', borderRadius: '4px', background: 'var(--panel)', border: '1px solid var(--line)', fontFamily: 'monospace' }}>B</kbd> for instant seamless crossfade (both matched to -20 LUFS).</>
+        )}
       </p>
     </div>
   );

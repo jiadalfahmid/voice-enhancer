@@ -347,8 +347,8 @@ export default function Studio() {
         </section>
       )}
 
-      {/* Comparison Player */}
-      {versions.some((v) => v.kind === 'result' && v.status === 'ok') && (
+      {/* Audio Player & Comparison */}
+      {orig && (
         <CompareView store={store} versions={versions} aId={autoA} bId={autoB} setA={setA} setB={setB} />
       )}
 
