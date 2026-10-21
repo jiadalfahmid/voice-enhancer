@@ -22,9 +22,48 @@ export class JobCoordinator {
   private engines: Map<string, EngineAdapter>;
   private maxConcurrent: number;
   private alignmentTolerance: number;
+  private maxWarmEngines: number;
+  private activeJobs = new Set<string>();
+  private recentEngines: string[] = [];
+  private usedEngines = new Set<string>();
 
-  constructor(store: VersionStore, engines: Map<string, EngineAdapter>, maxConcurrent = 1, alignmentTolerance = 2) {
-    this.store = store; this.engines = engines; this.maxConcurrent = maxConcurrent; this.alignmentTolerance = alignmentTolerance;
+  constructor(
+    store: VersionStore,
+    engines: Map<string, EngineAdapter>,
+    maxConcurrent = 1,
+    alignmentTolerance = 2,
+    maxWarmEngines = 1
+  ) {
+    this.store = store;
+    this.engines = engines;
+    this.maxConcurrent = maxConcurrent;
+    this.alignmentTolerance = alignmentTolerance;
+    this.maxWarmEngines = Math.max(1, maxWarmEngines);
+  }
+
+  /** Retain only the most recently used idle engines warm; dispose the rest to prevent memory buildup. */
+  private retainWarm(recentEngineId: string) {
+    this.recentEngines = [recentEngineId, ...this.recentEngines.filter((id) => id !== recentEngineId)];
+    const warmLimit = Math.max(this.maxWarmEngines, this.maxConcurrent);
+    const toKeep = new Set([...this.activeJobs, ...this.recentEngines.slice(0, warmLimit)]);
+    for (const id of Array.from(this.usedEngines)) {
+      if (!toKeep.has(id)) {
+        const engine = this.engines.get(id);
+        engine?.dispose();
+        this.loaded.delete(id);
+        this.usedEngines.delete(id);
+      }
+    }
+  }
+
+  /** Dispose all engine workers. */
+  disposeAll() {
+    for (const [id, engine] of this.engines) {
+      engine.dispose();
+      this.loaded.delete(id);
+    }
+    this.recentEngines = [];
+    this.usedEngines.clear();
   }
 
   /** Process `parentId` with `engineId`. Resolves with the new version id; failures are stored and never touch existing results. */
@@ -34,6 +73,8 @@ export class JobCoordinator {
     const promise = new Promise<string>((resolve, reject) => {
       const start = async () => {
         st = 'running'; this.running++;
+        this.activeJobs.add(engineId);
+        this.usedEngines.add(engineId);
         const t0 = Date.now();
         try {
           if (ctrl.signal.aborted) throw new DOMException('cancelled', 'AbortError');
@@ -59,7 +100,12 @@ export class JobCoordinator {
             try { this.store.addFailure(parentId, engineId, (e as Error).message, Date.now() - t0); } catch { /* parent gone: nothing to attach to */ }
             reject(e);
           }
-        } finally { this.running--; this.next(); }
+        } finally {
+          this.activeJobs.delete(engineId);
+          this.retainWarm(engineId);
+          this.running--;
+          this.next();
+        }
       };
       this.queue.push(start);
       this.next();

@@ -110,3 +110,32 @@ test('imported results keep their label', () => {
   const v = store.addResult(orig.id, 'external', audio(), 0, 'Imported: x.wav');
   assert.equal(store.get(v.id)!.label, 'Imported: x.wav');
 });
+
+test('idle engine disposal keeps only the most recent engine warm across runs', async () => {
+  const disposed: string[] = [];
+  const makeEngine = (id: string): EngineAdapter => ({
+    info: { id, label: id, availability: 'browser-ready', runtime: 'wasm', sampleRate: 16000, license: 'MIT' },
+    async load() {},
+    dispose() { disposed.push(id); },
+    run: async (a) => a,
+  });
+
+  const engines = [makeEngine('e1'), makeEngine('e2'), makeEngine('e3'), makeEngine('e4')];
+  const { orig, co } = setup(engines, 1);
+
+  await co.enqueue(orig.id, 'e1').promise;
+  assert.deepEqual(disposed, [], 'first engine remains warm');
+
+  await co.enqueue(orig.id, 'e2').promise;
+  assert.ok(disposed.includes('e1'), 'e1 was disposed after e2 completed');
+
+  await co.enqueue(orig.id, 'e3').promise;
+  assert.ok(disposed.includes('e2'), 'e2 was disposed after e3 completed');
+
+  await co.enqueue(orig.id, 'e4').promise;
+  assert.ok(disposed.includes('e3'), 'e3 was disposed after e4 completed');
+
+  // Verify only the most recent engine ('e4') was never disposed
+  assert.equal(disposed.includes('e4'), false, 'e4 is kept warm');
+});
+
