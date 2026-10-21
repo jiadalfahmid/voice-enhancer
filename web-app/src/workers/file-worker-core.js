@@ -24,7 +24,7 @@ export function createFileWorkerCore(post, { loadModel = builtinLoader, loadMp3 
       if (!options.modelId) { send({ type: 'error', code: 'UNKNOWN_MODEL', message: 'No enhancement engine was selected.' }); return; }
       send({ type: 'status', text: 'Loading enhancement model...' });
       try {
-        model = await loadModel(options.modelId);
+        model = await loadModel(options.modelId, { onStatus: (text) => send({ type: 'status', text }) });
       } catch (err) {
         if (err && err.code === 'UNKNOWN_MODEL') send({ type: 'error', code: 'UNKNOWN_MODEL', message: 'That enhancement engine is not available.' });
         else send({ type: 'error', code: 'MODEL_LOAD_FAILED', message: 'The enhancement model could not be loaded. Reload the page and try again.', detail: String(err && err.message) });

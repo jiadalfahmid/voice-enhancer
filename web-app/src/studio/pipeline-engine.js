@@ -11,14 +11,14 @@ export function createPipelineEngine({ info, modelId, job, options = NATURAL_OPT
   return {
     info,
     async load() { /* the model is loaded inside the worker on first run */ },
-    async run(input, { signal, onProgress }) {
+    async run(input, { signal, onProgress, onStatus }) {
       if (signal.aborted) throw abortError();
       // the worker takes ownership of the buffers it is sent, so it gets copies: the stored version stays intact
       const channels = input.channels.map((c) => c.slice());
       const onAbort = () => job.cancel();
       signal.addEventListener('abort', onAbort, { once: true });
       try {
-        await job.process({ channels, sampleRate: input.sampleRate, options: { modelId, ...options } }, { onProgress });
+        await job.process({ channels, sampleRate: input.sampleRate, options: { modelId, ...options } }, { onProgress, onStatus });
         if (signal.aborted) throw abortError();
         const r = await job.render({ strength: 1, targetLufs: STUDIO_TARGET_LUFS, normalize: true, useLimiter: true });
         return { channels: r.channels, sampleRate: input.sampleRate };

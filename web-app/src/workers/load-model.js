@@ -11,75 +11,94 @@ let dpdfnet16k = null;
 let dpdfnet48k = null;
 let deepfilternet3 = null;
 
-async function loadGtcrn() {
+async function fetchWithProgress(url, { onStatus, label = 'model' } = {}) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${label} fetch failed: ${res.status}`);
+  const total = parseInt(res.headers.get('content-length') || '0', 10);
+  if (!res.body || !total || !onStatus) {
+    return new Uint8Array(await res.arrayBuffer());
+  }
+  const reader = res.body.getReader();
+  const chunks = [];
+  let loaded = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.length;
+    const mbLoaded = (loaded / (1024 * 1024)).toFixed(1);
+    const mbTotal = (total / (1024 * 1024)).toFixed(1);
+    onStatus(`Downloading ${label} (${mbLoaded} / ${mbTotal} MB)...`);
+  }
+  const result = new Uint8Array(loaded);
+  let pos = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, pos);
+    pos += chunk.length;
+  }
+  return result;
+}
+
+async function loadGtcrn(opts = {}) {
   const ort = await import('onnxruntime-web/wasm');
   const base = `${self.location.origin}${import.meta.env.BASE_URL}`;
   ort.env.wasm.wasmPaths = `${base}ort/`;
   ort.env.wasm.numThreads = 1; // one tiny frame per call: threading overhead would cost more than it saves
-  const res = await fetch(`${base}models/gtcrn_simple.onnx`);
-  if (!res.ok) throw new Error(`model fetch failed: ${res.status}`);
-  const session = await ort.InferenceSession.create(new Uint8Array(await res.arrayBuffer()), {
+  const bytes = await fetchWithProgress(`${base}models/gtcrn_simple.onnx`, { onStatus: opts.onStatus, label: 'GTCRN (1.3 MB)' });
+  const session = await ort.InferenceSession.create(bytes, {
     executionProviders: ['wasm'], graphOptimizationLevel: 'all',
   });
   return createGtcrnModel(ort, session);
 }
 
-async function loadDpdfnet16k() {
+async function loadDpdfnet16k(opts = {}) {
   const ort = await import('onnxruntime-web/wasm');
   const base = `${self.location.origin}${import.meta.env.BASE_URL}`;
   ort.env.wasm.wasmPaths = `${base}ort/`;
   ort.env.wasm.numThreads = 1;
-  const res = await fetch(`${base}models/dpdfnet_baseline.onnx`);
-  if (!res.ok) throw new Error(`model fetch failed: ${res.status}`);
-  const session = await ort.InferenceSession.create(new Uint8Array(await res.arrayBuffer()), {
+  const bytes = await fetchWithProgress(`${base}models/dpdfnet_baseline.onnx`, { onStatus: opts.onStatus, label: 'DPDFNet-16k (1.2 MB)' });
+  const session = await ort.InferenceSession.create(bytes, {
     executionProviders: ['wasm'], graphOptimizationLevel: 'all',
   });
   return createDpdfnetModel(ort, session);
 }
 
-async function loadDpdfnet48k() {
+async function loadDpdfnet48k(opts = {}) {
   const ort = await import('onnxruntime-web/wasm');
   const base = `${self.location.origin}${import.meta.env.BASE_URL}`;
   ort.env.wasm.wasmPaths = `${base}ort/`;
   ort.env.wasm.numThreads = 1;
-  const res = await fetch(`${base}models/dpdfnet_48k.onnx`);
-  if (!res.ok) throw new Error(`model fetch failed: ${res.status}`);
-  const session = await ort.InferenceSession.create(new Uint8Array(await res.arrayBuffer()), {
+  const bytes = await fetchWithProgress(`${base}models/dpdfnet_48k.onnx`, { onStatus: opts.onStatus, label: 'DPDFNet-48k (2.3 MB)' });
+  const session = await ort.InferenceSession.create(bytes, {
     executionProviders: ['wasm'], graphOptimizationLevel: 'all',
   });
   return createDpdfnet48kModel(ort, session);
 }
 
-async function loadDeepfilternet3() {
+async function loadDeepfilternet3(opts = {}) {
   const base = `${self.location.origin}${import.meta.env.BASE_URL}`;
-  const [wasmRes, modelRes] = await Promise.all([
-    fetch(`${base}models/deepfilternet3/df_bg.wasm`),
-    fetch(`${base}models/deepfilternet3/DeepFilterNet3_onnx.bin`),
-  ]);
-  if (!wasmRes.ok) throw new Error(`DeepFilterNet3 wasm fetch failed: ${wasmRes.status}`);
-  if (!modelRes.ok) throw new Error(`DeepFilterNet3 model fetch failed: ${modelRes.status}`);
   const [wasmBytes, modelBytes] = await Promise.all([
-    wasmRes.arrayBuffer(),
-    modelRes.arrayBuffer(),
+    fetchWithProgress(`${base}models/deepfilternet3/df_bg.wasm`, { onStatus: opts.onStatus, label: 'DeepFilterNet3 WASM' }),
+    fetchWithProgress(`${base}models/deepfilternet3/DeepFilterNet3_onnx.bin`, { onStatus: opts.onStatus, label: 'DeepFilterNet3 Weights (8.5 MB)' }),
   ]);
-  return createDeepfilternet3Model(wasmBytes, modelBytes);
+  return createDeepfilternet3Model(wasmBytes.buffer, modelBytes.buffer);
 }
 
-export function loadModel(id) {
+export function loadModel(id, opts = {}) {
   if (id === 'gtcrn') {
-    gtcrn ||= loadGtcrn().catch((e) => { gtcrn = null; throw e; });
+    gtcrn ||= loadGtcrn(opts).catch((e) => { gtcrn = null; throw e; });
     return gtcrn;
   }
   if (id === 'dpdfnet-16k') {
-    dpdfnet16k ||= loadDpdfnet16k().catch((e) => { dpdfnet16k = null; throw e; });
+    dpdfnet16k ||= loadDpdfnet16k(opts).catch((e) => { dpdfnet16k = null; throw e; });
     return dpdfnet16k;
   }
   if (id === 'dpdfnet-48k') {
-    dpdfnet48k ||= loadDpdfnet48k().catch((e) => { dpdfnet48k = null; throw e; });
+    dpdfnet48k ||= loadDpdfnet48k(opts).catch((e) => { dpdfnet48k = null; throw e; });
     return dpdfnet48k;
   }
   if (id === 'deepfilternet3') {
-    deepfilternet3 ||= loadDeepfilternet3().catch((e) => { deepfilternet3 = null; throw e; });
+    deepfilternet3 ||= loadDeepfilternet3(opts).catch((e) => { deepfilternet3 = null; throw e; });
     return deepfilternet3;
   }
   return builtinLoader(id);

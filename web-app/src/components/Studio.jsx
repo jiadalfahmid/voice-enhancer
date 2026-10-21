@@ -194,7 +194,9 @@ export default function Studio() {
         {busy && (
           <div role="status" aria-live="polite" className="busy">
             <progress max="1" value={busy.progress} />
-            <span>Processing with {engineLabel(busy.engineId)}: {Math.round(busy.progress * 100)}%</span>
+            <span>
+              {busy.status || `Processing with ${engineLabel(busy.engineId)}: ${Math.round(busy.progress * 100)}%`}
+            </span>
             <button onClick={st.cancel}>Cancel</button>
           </div>
         )}

@@ -78,8 +78,11 @@ export function useStudio() {
 
   const run = useCallback(async (parentId, engineId) => {
     if (busy) return;
-    setNotice(null); setBusy({ engineId, parentId, progress: 0 });
-    const handle = rt.current.co.enqueue(parentId, engineId, { onProgress: (p) => setBusy((b) => (b ? { ...b, progress: p } : b)) });
+    setNotice(null); setBusy({ engineId, parentId, progress: 0, status: 'Initializing engine...' });
+    const handle = rt.current.co.enqueue(parentId, engineId, {
+      onProgress: (p) => setBusy((b) => (b ? { ...b, progress: p, status: null } : b)),
+      onStatus: (status) => setBusy((b) => (b ? { ...b, status } : b)),
+    });
     rt.current.handle = handle;
     try { await handle.promise; } catch (e) { say(e); } finally { rt.current.handle = null; setBusy(null); refresh(); }
   }, [busy, refresh]);

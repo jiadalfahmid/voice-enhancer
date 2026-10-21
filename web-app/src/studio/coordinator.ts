@@ -12,7 +12,7 @@ export function pickConcurrency(deviceMemoryGb = 4, cores = 4): number {
 }
 
 export interface JobHandle { promise: Promise<string>; cancel(): void; state(): 'queued' | 'running' | 'done' | 'failed' | 'cancelled' }
-export interface JobEvents { onProgress?: (fraction: number) => void }
+export interface JobEvents { onProgress?: (fraction: number) => void; onStatus?: (status: string) => void; }
 
 export class JobCoordinator {
   private running = 0;
@@ -88,7 +88,11 @@ export class JobCoordinator {
           if (!this.loaded.has(engineId)) this.loaded.set(engineId, engine.load(ctrl.signal).catch((e) => { this.loaded.delete(engineId); throw e; }));
           await this.loaded.get(engineId);
           if (ctrl.signal.aborted) throw new DOMException('cancelled', 'AbortError');
-          const out: AudioData = await engine.run(parent.audio, { signal: ctrl.signal, onProgress: (f) => events.onProgress?.(f) });
+          const out: AudioData = await engine.run(parent.audio, {
+            signal: ctrl.signal,
+            onProgress: (f) => events.onProgress?.(f),
+            onStatus: (s) => events.onStatus?.(s),
+          });
           if (ctrl.signal.aborted) throw new DOMException('cancelled', 'AbortError');
           if (Math.abs(out.channels[0].length - parent.length) > this.alignmentTolerance) throw new AlignmentError(parent.length, out.channels[0].length);
           const v = this.store.addResult(parentId, engineId, out, Date.now() - t0);

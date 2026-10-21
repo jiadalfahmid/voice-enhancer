@@ -21,6 +21,7 @@ export interface AudioData {
 export interface RunContext {
   signal: AbortSignal;
   onProgress: (fraction: number) => void;
+  onStatus?: (status: string) => void;
 }
 
 /** Every model integration implements this; internals may differ. */
